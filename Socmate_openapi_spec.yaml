@@ -1,0 +1,106 @@
+openapi: 3.0.1
+info:
+  title: Socmate SOC Investigation API
+  description: >
+    API for running SOC analyst investigations on security events using
+    the Socmate platform. Supports investigation of failed sign-ins,
+    suspicious activity, anomalies, and other security incidents with
+    configurable time ranges and output options.
+  version: "1.0"
+
+servers:
+  - url: https://agent.socmate.pcsaisuite.com
+
+paths:
+  /api/v1/public/investigate:
+    post:
+      operationId: InvestigateSecurityEvent
+      summary: Investigate a security event or query
+      description: >
+        Submits a natural language security investigation query to the Socmate platform.
+        Use this skill to investigate failed sign-ins, suspicious logins, anomalous behavior,
+        threat patterns, or any security event. Supports time ranges like 1h, 6h, 24h, 7d.
+        Returns a structured summary of findings from the SOC analyst perspective.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+                - persona
+                - provider
+              properties:
+                query:
+                  type: string
+                  description: >
+                    Natural language investigation query describing what security event
+                    to investigate. Examples: "Investigate failed sign-ins in the last 1 hour",
+                    "Summarize suspicious login activity in the last 6 hours",
+                    "Identify anomalous behavior for privileged accounts in the last 24 hours".
+                persona:
+                  type: string
+                  description: >
+                    The analyst persona to use for the investigation. Use 'soc_analyst'
+                    for standard SOC investigations.
+                  enum:
+                    - soc_analyst
+                  default: soc_analyst
+                provider:
+                  type: string
+                  description: >
+                    The security data provider to query. Use 'sentinel' for Microsoft Sentinel.
+                  enum:
+                    - sentinel
+                  default: sentinel
+                options:
+                  type: object
+                  description: Optional configuration for the investigation output format.
+                  properties:
+                    include_entity_diagram:
+                      type: boolean
+                      description: Whether to include an entity relationship diagram in the output.
+                      default: false
+                    include_structured_content:
+                      type: boolean
+                      description: Whether to include structured content in the response.
+                      default: true
+                    include_tool_calls:
+                      type: boolean
+                      description: Whether to include the internal tool calls made during investigation.
+                      default: false
+                    include_raw_results:
+                      type: boolean
+                      description: Whether to include raw query results in the response.
+                      default: false
+                    time_range:
+                      type: string
+                      description: >
+                        Time range for the investigation. Accepted values: 1h, 6h, 12h, 24h, 7d, 30d.
+                        Defaults to 1h if not specified.
+                      default: "1h"
+                      example: "1h"
+      responses:
+        "200":
+          description: Successful investigation response with structured findings.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: string
+                    description: High-level summary of the investigation findings.
+                  findings:
+                    type: object
+                    description: Detailed structured findings from the investigation.
+                  structured_content:
+                    type: object
+                    description: Structured content blocks including analysis, recommendations, and IOCs.
+        "400":
+          description: Bad request — invalid query or missing required fields.
+        "401":
+          description: Unauthorized — invalid or missing API key.
+        "500":
+          description: Internal server error from the Socmate platform.
