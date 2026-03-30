@@ -1,110 +1,148 @@
-openapi: 3.0.1
-info:
-  title: Socmate SOC Investigation API
-  description: >
-    API for running SOC analyst investigations on security events using
-    the Socmate platform. Supports investigation of failed sign-ins,
-    suspicious activity, anomalies, and other security incidents with
-    configurable time ranges and output options.
-  version: "1.0"
-
-servers:
-  - url: https://agent.socmate.pcsaisuite.com
-
-paths:
-  /api/v1/public/investigate:
-    post:
-      operationId: InvestigateSecurityEvent
-      summary: Investigate a security event or query
-      description: >
-        Submits a natural language security investigation query to the Socmate platform.
-        Use this skill to investigate failed sign-ins, suspicious logins, anomalous behavior,
-        brute force attacks, lateral movement, impossible travel, data exfiltration,
-        privileged account anomalies, or any security event within a specified time window.
-        Always set persona to soc_analyst and provider to sentinel.
-        Returns a structured summary of findings from the SOC analyst perspective.
-      x-ms-skill-description: >
-        Investigates security events in Microsoft Sentinel via the Socmate platform.
-        Accepts a natural language query describing what to investigate, a persona of
-        soc_analyst, a provider of sentinel, and a time range such as 1h, 6h, 12h,
-        24h, 7d, or 30d. Returns structured investigation findings including summary,
-        analysis, indicators of compromise, and recommendations.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - query
-                - persona
-                - provider
-              properties:
-                query:
-                  type: string
-                  x-ms-skill-parameter: true
-                  description: >
-                    Natural language investigation query describing what security event
-                    to investigate. Be specific and descriptive. Examples:
-                    "Investigate all failed sign-in attempts in the last 24 hours",
-                    "Summarize suspicious login activity in the last 6 hours",
-                    "Identify brute force attack patterns in the last 12 hours",
-                    "Detect lateral movement indicators in the last 24 hours",
-                    "Identify impossible travel events in the last 7 days",
-                    "Summarize data exfiltration indicators in the last 24 hours",
-                    "Identify anomalous behavior for privileged accounts in the last 24 hours".
-                persona:
-                  type: string
-                  x-ms-skill-parameter: true
-                  description: >
-                    The analyst persona to use. Always use soc_analyst.
-                  enum:
-                    - soc_analyst
-                  default: soc_analyst
-                provider:
-                  type: string
-                  x-ms-skill-parameter: true
-                  description: >
-                    The security data provider to query. Always use sentinel.
-                  enum:
-                    - sentinel
-                  default: sentinel
-                time_range:
-                  type: string
-                  x-ms-skill-parameter: true
-                  description: >
-                    Time range for the investigation. Extract from user query.
-                    Use 1h for last hour, 6h for last 6 hours, 12h for last 12 hours,
-                    24h for today or last 24 hours, 7d for this week or last 7 days,
-                    30d for last month. Default is 24h if not specified.
-                  enum:
-                    - 1h
-                    - 6h
-                    - 12h
-                    - 24h
-                    - 7d
-                    - 30d
-                  default: "24h"
-      responses:
-        "200":
-          description: Successful investigation response with structured findings.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  summary:
-                    type: string
-                    description: High-level summary of the investigation findings.
-                  findings:
-                    type: object
-                    description: Detailed structured findings from the investigation.
-                  structured_content:
-                    type: object
-                    description: Structured content blocks including analysis, recommendations, and IOCs.
-        "400":
-          description: Bad request — invalid query or missing required fields.
-        "401":
-          description: Unauthorized — invalid or missing API key.
-        "500":
-          description: Internal server error from the Socmate platform.
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Socmate SOC Investigation API",
+    "description": "SOC investigation API for Microsoft Security Copilot. Investigates security events in Microsoft Sentinel using natural language queries.",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "https://agent.socmate.pcsaisuite.com"
+    }
+  ],
+  "paths": {
+    "/api/v1/public/investigate": {
+      "post": {
+        "operationId": "InvestigateSecurityEvent",
+        "summary": "Investigate a security event or query",
+        "description": "Submits a natural language security investigation query to the Socmate platform against Microsoft Sentinel. Use to investigate failed sign-ins, suspicious logins, brute force attacks, lateral movement, impossible travel, data exfiltration, privileged account anomalies, or any security event. Always set persona to soc_analyst and provider to sentinel. Returns structured findings including summary, entities, and structured content.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlatInvestigateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful investigation response with structured findings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestigateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request — invalid query or missing required fields."
+          },
+          "401": {
+            "description": "Unauthorized — invalid or missing API key."
+          },
+          "500": {
+            "description": "Internal server error."
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "FlatInvestigateRequest": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Natural language investigation query. Be specific. Examples: Investigate all failed sign-in attempts in the last 24 hours. Identify brute force attack patterns in the last 12 hours. Detect lateral movement indicators in the last 24 hours. Summarize suspicious login activity in the last 6 hours. Identify impossible travel events in the last 7 days. Summarize data exfiltration indicators in the last 24 hours. Identify anomalous activity for privileged accounts in the last 24 hours."
+          },
+          "persona": {
+            "type": "string",
+            "description": "Analyst persona. Always use soc_analyst.",
+            "enum": ["soc_analyst", "ciso"],
+            "default": "soc_analyst"
+          },
+          "provider": {
+            "type": "string",
+            "description": "SIEM provider to query. Always use sentinel.",
+            "enum": ["sentinel", "chronicle", "archer"],
+            "default": "sentinel"
+          },
+          "options": {
+            "$ref": "#/components/schemas/InvestigationOptions"
+          }
+        },
+        "example": {
+          "query": "Investigate all failed sign-in attempts in the last 24 hours",
+          "persona": "soc_analyst",
+          "provider": "sentinel",
+          "options": {
+            "time_range": "24h",
+            "include_structured_content": true,
+            "include_entity_diagram": false,
+            "include_tool_calls": false,
+            "include_raw_results": false
+          }
+        }
+      },
+      "InvestigationOptions": {
+        "type": "object",
+        "properties": {
+          "time_range": {
+            "type": "string",
+            "description": "Time range for the investigation. Use 1h for last hour, 6h for last 6 hours, 12h for last 12 hours, 24h for today or last 24 hours, 7d for last 7 days, 30d for last 30 days. Default is 24h.",
+            "enum": ["1h", "6h", "12h", "24h", "7d", "30d"],
+            "default": "24h"
+          },
+          "include_structured_content": {
+            "type": "boolean",
+            "default": true
+          },
+          "include_entity_diagram": {
+            "type": "boolean",
+            "default": false
+          },
+          "include_tool_calls": {
+            "type": "boolean",
+            "default": false
+          },
+          "include_raw_results": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "InvestigateResponse": {
+        "type": "object",
+        "properties": {
+          "session_id": { "type": "string" },
+          "run_id": { "type": "string" },
+          "status": { "type": "string" },
+          "title": { "type": "string" },
+          "summary": { "type": "string" },
+          "structured_content": { "type": "object" },
+          "entities": { "type": "array", "items": { "type": "object" } },
+          "relationships": { "type": "array", "items": { "type": "object" } },
+          "metadata": { "type": "object" },
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}
