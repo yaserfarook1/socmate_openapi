@@ -19,8 +19,16 @@ paths:
       description: >
         Submits a natural language security investigation query to the Socmate platform.
         Use this skill to investigate failed sign-ins, suspicious logins, anomalous behavior,
-        threat patterns, or any security event. Supports time ranges like 1h, 6h, 24h, 7d.
+        brute force attacks, lateral movement, impossible travel, data exfiltration,
+        privileged account anomalies, or any security event within a specified time window.
+        Always set persona to soc_analyst and provider to sentinel.
         Returns a structured summary of findings from the SOC analyst perspective.
+      x-ms-skill-description: >
+        Investigates security events in Microsoft Sentinel via the Socmate platform.
+        Accepts a natural language query describing what to investigate, a persona of
+        soc_analyst, a provider of sentinel, and a time range such as 1h, 6h, 12h,
+        24h, 7d, or 30d. Returns structured investigation findings including summary,
+        analysis, indicators of compromise, and recommendations.
       requestBody:
         required: true
         content:
@@ -34,53 +42,49 @@ paths:
               properties:
                 query:
                   type: string
+                  x-ms-skill-parameter: true
                   description: >
                     Natural language investigation query describing what security event
-                    to investigate. Examples: "Investigate failed sign-ins in the last 1 hour",
+                    to investigate. Be specific and descriptive. Examples:
+                    "Investigate all failed sign-in attempts in the last 24 hours",
                     "Summarize suspicious login activity in the last 6 hours",
+                    "Identify brute force attack patterns in the last 12 hours",
+                    "Detect lateral movement indicators in the last 24 hours",
+                    "Identify impossible travel events in the last 7 days",
+                    "Summarize data exfiltration indicators in the last 24 hours",
                     "Identify anomalous behavior for privileged accounts in the last 24 hours".
                 persona:
                   type: string
+                  x-ms-skill-parameter: true
                   description: >
-                    The analyst persona to use for the investigation. Use 'soc_analyst'
-                    for standard SOC investigations.
+                    The analyst persona to use. Always use soc_analyst.
                   enum:
                     - soc_analyst
                   default: soc_analyst
                 provider:
                   type: string
+                  x-ms-skill-parameter: true
                   description: >
-                    The security data provider to query. Use 'sentinel' for Microsoft Sentinel.
+                    The security data provider to query. Always use sentinel.
                   enum:
                     - sentinel
                   default: sentinel
-                options:
-                  type: object
-                  description: Optional configuration for the investigation output format.
-                  properties:
-                    include_entity_diagram:
-                      type: boolean
-                      description: Whether to include an entity relationship diagram in the output.
-                      default: false
-                    include_structured_content:
-                      type: boolean
-                      description: Whether to include structured content in the response.
-                      default: true
-                    include_tool_calls:
-                      type: boolean
-                      description: Whether to include the internal tool calls made during investigation.
-                      default: false
-                    include_raw_results:
-                      type: boolean
-                      description: Whether to include raw query results in the response.
-                      default: false
-                    time_range:
-                      type: string
-                      description: >
-                        Time range for the investigation. Accepted values: 1h, 6h, 12h, 24h, 7d, 30d.
-                        Defaults to 1h if not specified.
-                      default: "1h"
-                      example: "1h"
+                time_range:
+                  type: string
+                  x-ms-skill-parameter: true
+                  description: >
+                    Time range for the investigation. Extract from user query.
+                    Use 1h for last hour, 6h for last 6 hours, 12h for last 12 hours,
+                    24h for today or last 24 hours, 7d for this week or last 7 days,
+                    30d for last month. Default is 24h if not specified.
+                  enum:
+                    - 1h
+                    - 6h
+                    - 12h
+                    - 24h
+                    - 7d
+                    - 30d
+                  default: "24h"
       responses:
         "200":
           description: Successful investigation response with structured findings.
