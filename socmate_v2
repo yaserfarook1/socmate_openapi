@@ -1,0 +1,183 @@
+openapi: 3.0.0
+info:
+  title: SOCmate Investigate API
+  description: >
+    AI-powered SOC investigation API. Accepts natural language security queries
+    and returns structured findings using configurable personas, providers, and
+    time ranges. Designed for use with Microsoft Security Copilot.
+  version: "v1"
+
+servers:
+  - url: https://agent.socmate.pcsaisuite.com/api/v1/public
+
+paths:
+  /investigate:
+    post:
+      operationId: InvestigateSecurityQuery
+      summary: Investigate a security query using AI-powered SOC analysis
+      description: >
+        Submit a natural language security investigation query. The API analyses
+        signals from the specified provider (e.g. Microsoft Sentinel), applies
+        the selected SOC persona, and returns structured findings. Use this skill
+        to investigate failed sign-ins, suspicious activity, threat actors,
+        lateral movement, or any security event within a configurable time range.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvestigateRequest"
+      responses:
+        "200":
+          description: Investigation completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvestigateResponse"
+        "400":
+          description: Bad request — missing or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized — invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    InvestigateRequest:
+      type: object
+      required:
+        - query
+        - persona
+        - provider
+      properties:
+        query:
+          type: string
+          description: >
+            Natural language security investigation query. Examples:
+            "Investigate failed sign-ins in the last 1 hour and summarize the findings.",
+            "Summarize all high severity alerts from the last 24 hours.",
+            "Identify any lateral movement activity in the last 6 hours."
+        persona:
+          type: string
+          description: >
+            SOC analyst persona to apply during the investigation.
+            Use 'soc_analyst' for general investigations.
+          enum:
+            - soc_analyst
+          default: soc_analyst
+        provider:
+          type: string
+          description: >
+            Security data provider to query. Use 'sentinel' for Microsoft Sentinel.
+          enum:
+            - sentinel
+          default: sentinel
+        options:
+          $ref: "#/components/schemas/InvestigateOptions"
+
+    InvestigateOptions:
+      type: object
+      description: Optional flags to control what is included in the investigation response.
+      properties:
+        include_entity_diagram:
+          type: boolean
+          description: Whether to include an entity relationship diagram in the response.
+          default: false
+        include_structured_content:
+          type: boolean
+          description: Whether to include structured/formatted content in the response.
+          default: true
+        include_tool_calls:
+          type: boolean
+          description: Whether to include the internal tool calls made during investigation.
+          default: false
+        include_raw_results:
+          type: boolean
+          description: Whether to include raw query results from the data provider.
+          default: false
+        time_range:
+          type: string
+          description: >
+            Time range for the investigation. Accepted values: 15m, 30m, 1h, 3h,
+            6h, 12h, 24h, 48h, 7d, 30d.
+          enum:
+            - 15m
+            - 30m
+            - 1h
+            - 3h
+            - 6h
+            - 12h
+            - 24h
+            - 48h
+            - 7d
+            - 30d
+          default: 1h
+
+    InvestigateResponse:
+      type: object
+      description: Investigation results returned by the SOCmate API.
+      properties:
+        summary:
+          type: string
+          description: A concise natural language summary of the investigation findings.
+        structured_content:
+          type: object
+          description: Structured breakdown of findings (present when include_structured_content is true).
+          additionalProperties: true
+        entity_diagram:
+          type: string
+          description: Entity relationship diagram (present when include_entity_diagram is true).
+          nullable: true
+        tool_calls:
+          type: array
+          description: List of internal tool calls made during the investigation (present when include_tool_calls is true).
+          items:
+            type: object
+            additionalProperties: true
+        raw_results:
+          type: object
+          description: Raw results from the underlying data provider (present when include_raw_results is true).
+          additionalProperties: true
+        metadata:
+          type: object
+          description: Investigation metadata such as time range, provider, and persona used.
+          properties:
+            time_range:
+              type: string
+            provider:
+              type: string
+            persona:
+              type: string
+            query:
+              type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message describing what went wrong.
+        code:
+          type: integer
+          description: HTTP status code.
+
+security:
+  - ApiKeyAuth: []
